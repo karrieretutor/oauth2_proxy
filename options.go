@@ -73,6 +73,7 @@ type Options struct {
 	ValidateURL       string `flag:"validate-url" cfg:"validate_url"`
 	Scope             string `flag:"scope" cfg:"scope"`
 	ApprovalPrompt    string `flag:"approval-prompt" cfg:"approval_prompt"`
+    B2CPolicy            string `flag:"b2c-policy" cfg:"b2c_policy"`
 
 	RequestLogging       bool   `flag:"request-logging" cfg:"request_logging"`
 	RequestLoggingFormat string `flag:"request-logging-format" cfg:"request_logging_format"`
@@ -151,7 +152,7 @@ func (o *Options) Validate() error {
 
 	if o.OIDCIssuerURL != "" {
 		// Configure discoverable provider data.
-		provider, err := oidc.NewProvider(context.Background(), o.OIDCIssuerURL)
+		provider, err := oidc.NewProvider(context.Background(), o.OIDCIssuerURL, o.B2CPolicy)
 		if err != nil {
 			return err
 		}

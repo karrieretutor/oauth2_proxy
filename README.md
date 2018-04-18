@@ -155,6 +155,27 @@ OpenID Connect is a spec for OAUTH 2.0 + identity that is implemented by many ma
     -cookie-secure=false
     -email-domain example.com
 
+### Microsoft Azure AD B2C 
+
+We have created a small fork of the OpenID Connect Provider which takes the required Azure AD B2C policy argument to get the proper login & redeem URLs from the OIDC issuer data. This is required as you always need to supply a signin/signup policy when calling the Azure AD B2C login URL.
+
+This for also required a small change in the CoreOS `go-oidc` code, which have also forked and changed to use the supplied AAD B2C policy.
+
+Check the supplied Dockerfile for reference of cloning our repository in the proper `src/` directories in your `$GOPATH` so the package imports are done correctly.
+
+To use the forked OpenID Connect Provider with Azure AD B2C accounts, start oauth2_proxy with the following args:
+
+  -provider oidc
+  -client-id "client id of the registered B2C application"
+  -client-secret "client key of the registered B2C application"
+  -b2c-policy "The name of your signup & signin policy"
+  -redirect-url http://127.0.0.1:4180/oauth2/callback
+  -oidc-issuer-url https://login.microsoftonline.com/b2c-tenant-id/v2.0/
+  -cookie-secure=false
+  -email-domain example.com
+  -scope "b2c-registered-app-id openid"
+
+
 ## Email Authentication
 
 To authorize by email domain use `--email-domain=yourcompany.com`. To authorize individual email addresses use `--authenticated-emails-file=/path/to/file` with one email per line. To authorize all email addresses use `--email-domain=*`.

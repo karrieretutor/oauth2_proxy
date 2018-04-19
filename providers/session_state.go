@@ -15,6 +15,8 @@ type SessionState struct {
 	RefreshToken string
 	Email        string
 	User         string
+	// Add any custom attributes here
+	// Name         string
 }
 
 func (s *SessionState) IsExpired() bool {
@@ -45,8 +47,12 @@ func (s *SessionState) EncodeSessionState(c *cookie.Cipher) (string, error) {
 	return s.EncryptedString(c)
 }
 
+// The string returned by accountInfo() is used as content for the session cookie
+// This string is later being used by decodeSessionStatePlain(), which splits it to extract the email and user
+// decodeSessionStatePlain() needs to be changed in addition to the SessionState struct when additional attributes are
+// being used.
 func (s *SessionState) accountInfo() string {
-	return fmt.Sprintf("email:%s user:%s", s.Email, s.User)
+	return fmt.Sprintf("email:%s user:%s name:%s", s.Email, s.User, s.Name)
 }
 
 func (s *SessionState) EncryptedString(c *cookie.Cipher) (string, error) {
@@ -71,17 +77,18 @@ func (s *SessionState) EncryptedString(c *cookie.Cipher) (string, error) {
 
 func decodeSessionStatePlain(v string) (s *SessionState, err error) {
 	chunks := strings.Split(v, " ")
-	if len(chunks) != 2 {
-		return nil, fmt.Errorf("could not decode session state: expected 2 chunks got %d", len(chunks))
-	}
+	//if len(chunks) != 2 {
+	//	return nil, fmt.Errorf("could not decode session state: expected 2 chunks got %d", len(chunks))
+	//}
 
 	email := strings.TrimPrefix(chunks[0], "email:")
 	user := strings.TrimPrefix(chunks[1], "user:")
+	name := strings.TrimPrefix(chunks[2], "name:") + chunks[3]
 	if user == "" {
 		user = strings.Split(email, "@")[0]
 	}
 
-	return &SessionState{User: user, Email: email}, nil
+	return &SessionState{User: user, Email: email, Name: name}, nil
 }
 
 func DecodeSessionState(v string, c *cookie.Cipher) (s *SessionState, err error) {

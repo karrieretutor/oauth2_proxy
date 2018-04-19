@@ -51,6 +51,8 @@ func (p *OIDCProvider) Redeem(redirectURL, code string) (s *SessionState, err er
 	var claims struct {
 		Email    string `json:"email"`
 		Verified *bool  `json:"email_verified"`
+		// Add any custom attributes here
+		// Name     string `json:"name"`
 	}
 	if err := idToken.Claims(&claims); err != nil {
 		return nil, fmt.Errorf("failed to parse id_token claims: %v", err)
@@ -68,6 +70,8 @@ func (p *OIDCProvider) Redeem(redirectURL, code string) (s *SessionState, err er
 		RefreshToken: token.RefreshToken,
 		ExpiresOn:    token.Expiry,
 		Email:        claims.Email,
+		// Add any custom attributes here
+		// Name:         claims.Name,
 	}
 
 	return

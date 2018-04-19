@@ -32,6 +32,8 @@ var SignatureHeaders []string = []string{
 	"X-Forwarded-Access-Token",
 	"Cookie",
 	"Gap-Auth",
+	// Add any custom attributes here
+	// "X-Name",
 }
 
 type OAuthProxy struct {
@@ -679,12 +681,16 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 	if p.PassBasicAuth {
 		req.SetBasicAuth(session.User, p.BasicAuthPassword)
 		req.Header["X-Forwarded-User"] = []string{session.User}
+		// Add any custom attributes here
+		// req.Header["X-Name"] = []string{session.Name}
 		if session.Email != "" {
 			req.Header["X-Forwarded-Email"] = []string{session.Email}
 		}
 	}
 	if p.PassUserHeaders {
 		req.Header["X-Forwarded-User"] = []string{session.User}
+		// Add any custom attributes here
+		// req.Header["X-Name"] = []string{session.Name}
 		if session.Email != "" {
 			req.Header["X-Forwarded-Email"] = []string{session.Email}
 		}

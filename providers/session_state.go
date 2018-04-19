@@ -52,7 +52,9 @@ func (s *SessionState) EncodeSessionState(c *cookie.Cipher) (string, error) {
 // decodeSessionStatePlain() needs to be changed in addition to the SessionState struct when additional attributes are
 // being used.
 func (s *SessionState) accountInfo() string {
-	return fmt.Sprintf("email:%s user:%s name:%s", s.Email, s.User, s.Name)
+	return fmt.Sprintf("email:%s user:%s", s.Email, s.User)
+	// below is the preparation for custom attributes
+	// return fmt.Sprintf("email:%s user:%s name:%s", s.Email, s.User, s.Name)
 }
 
 func (s *SessionState) EncryptedString(c *cookie.Cipher) (string, error) {
@@ -77,18 +79,23 @@ func (s *SessionState) EncryptedString(c *cookie.Cipher) (string, error) {
 
 func decodeSessionStatePlain(v string) (s *SessionState, err error) {
 	chunks := strings.Split(v, " ")
-	//if len(chunks) != 2 {
-	//	return nil, fmt.Errorf("could not decode session state: expected 2 chunks got %d", len(chunks))
-	//}
+	// below is the preparation for custom attributes
+	// change chunk length check when adding custom attributes
+	if len(chunks) != 2 {
+		return nil, fmt.Errorf("could not decode session state: expected 2 chunks got %d", len(chunks))
+	}
 
 	email := strings.TrimPrefix(chunks[0], "email:")
 	user := strings.TrimPrefix(chunks[1], "user:")
-	name := strings.TrimPrefix(chunks[2], "name:") + chunks[3]
+	// below is the preparation for custom attributes
+	// name := strings.TrimPrefix(chunks[2], "name:") + chunks[3]
 	if user == "" {
 		user = strings.Split(email, "@")[0]
 	}
 
-	return &SessionState{User: user, Email: email, Name: name}, nil
+	return &SessionState{User: user, Email: email}, nil
+	// below is the preparation for custom attributes
+	// return &SessionState{User: user, Email: email, Name: name}, nil
 }
 
 func DecodeSessionState(v string, c *cookie.Cipher) (s *SessionState, err error) {

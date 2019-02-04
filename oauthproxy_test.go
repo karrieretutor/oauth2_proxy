@@ -18,6 +18,7 @@ import (
 	"github.com/mbland/hmacauth"
 	"github.com/pusher/oauth2_proxy/providers"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -38,7 +39,7 @@ func TestNewReverseProxy(t *testing.T) {
 	backendHost := net.JoinHostPort(backendHostname, backendPort)
 	proxyURL, _ := url.Parse(backendURL.Scheme + "://" + backendHost + "/")
 
-	proxyHandler := NewReverseProxy(proxyURL)
+	proxyHandler := NewReverseProxy(proxyURL, time.Second)
 	setProxyUpstreamHostHeader(proxyHandler, proxyURL)
 	frontend := httptest.NewServer(proxyHandler)
 	defer frontend.Close()
@@ -60,7 +61,7 @@ func TestEncodedSlashes(t *testing.T) {
 	defer backend.Close()
 
 	b, _ := url.Parse(backend.URL)
-	proxyHandler := NewReverseProxy(b)
+	proxyHandler := NewReverseProxy(b, time.Second)
 	setProxyDirector(proxyHandler)
 	frontend := httptest.NewServer(proxyHandler)
 	defer frontend.Close()
@@ -836,4 +837,101 @@ func TestRequestSignaturePostRequest(t *testing.T) {
 	st.MakeRequestWithExpectedKey("POST", payload, "foobar")
 	assert.Equal(t, 200, st.rw.Code)
 	assert.Equal(t, st.rw.Body.String(), "signatures match")
+}
+
+func TestGetRedirect(t *testing.T) {
+	options := NewOptions()
+	_ = options.Validate()
+	require.NotEmpty(t, options.ProxyPrefix)
+	proxy := NewOAuthProxy(options, func(s string) bool { return false })
+
+	tests := []struct {
+		name             string
+		url              string
+		expectedRedirect string
+	}{
+		{
+			name:             "request outside of ProxyPrefix redirects to original URL",
+			url:              "/foo/bar",
+			expectedRedirect: "/foo/bar",
+		},
+		{
+			name:             "request under ProxyPrefix redirects to root",
+			url:              proxy.ProxyPrefix + "/foo/bar",
+			expectedRedirect: "/",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, _ := http.NewRequest("GET", tt.url, nil)
+			redirect, err := proxy.GetRedirect(req)
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedRedirect, redirect)
+		})
+	}
+}
+
+type ajaxRequestTest struct {
+	opts  *Options
+	proxy *OAuthProxy
+}
+
+func newAjaxRequestTest() *ajaxRequestTest {
+	test := &ajaxRequestTest{}
+	test.opts = NewOptions()
+	test.opts.CookieSecret = "foobar"
+	test.opts.ClientID = "bazquux"
+	test.opts.ClientSecret = "xyzzyplugh"
+	test.opts.Validate()
+	test.proxy = NewOAuthProxy(test.opts, func(email string) bool {
+		return true
+	})
+	return test
+}
+
+func (test *ajaxRequestTest) getEndpoint(endpoint string, header http.Header) (int, http.Header, error) {
+	rw := httptest.NewRecorder()
+	req, err := http.NewRequest(http.MethodGet, endpoint, strings.NewReader(""))
+	if err != nil {
+		return 0, nil, err
+	}
+	req.Header = header
+	test.proxy.ServeHTTP(rw, req)
+	return rw.Code, rw.Header(), nil
+}
+
+func testAjaxUnauthorizedRequest(t *testing.T, header http.Header) {
+	test := newAjaxRequestTest()
+	endpoint := "/test"
+
+	code, rh, err := test.getEndpoint(endpoint, header)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusUnauthorized, code)
+	mime := rh.Get("Content-Type")
+	assert.Equal(t, applicationJSON, mime)
+}
+func TestAjaxUnauthorizedRequest1(t *testing.T) {
+	header := make(http.Header)
+	header.Add("accept", applicationJSON)
+
+	testAjaxUnauthorizedRequest(t, header)
+}
+
+func TestAjaxUnauthorizedRequest2(t *testing.T) {
+	header := make(http.Header)
+	header.Add("Accept", applicationJSON)
+
+	testAjaxUnauthorizedRequest(t, header)
+}
+
+func TestAjaxForbiddendRequest(t *testing.T) {
+	test := newAjaxRequestTest()
+	endpoint := "/test"
+	header := make(http.Header)
+	code, rh, err := test.getEndpoint(endpoint, header)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, code)
+	mime := rh.Get("Content-Type")
+	assert.NotEqual(t, applicationJSON, mime)
 }

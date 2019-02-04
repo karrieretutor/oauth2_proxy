@@ -10,6 +10,10 @@
 - [#21](https://github.com/pusher/oauth2_proxy/pull/21) Docker Improvement (@yaegashi)
   - Move Docker base image from debian to alpine
   - Install ca-certificates in docker image
+- [#23](https://github.com/pusher/oauth2_proxy/pull/21) Flushed streaming responses
+  - Long-running upstream responses will get flushed every <timeperiod> (1 second by default)
+- [#24](https://github.com/pusher/oauth2_proxy/pull/24) Redirect fix (@agentgonzo)
+  - After a successful login, you will be redirected to your original URL rather than /
 
 # v3.0.0
 
